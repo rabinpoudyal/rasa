@@ -279,7 +279,6 @@ class CombinedDataImporter(TrainingDataImporter):
             lambda merged, other: merged.merge(other), nlu_data, TrainingData()
         )
 
-
 class E2EImporter(TrainingDataImporter):
     """Importer which
     - enhances the NLU training data with actions / user messages from the stories.
@@ -311,7 +310,6 @@ class E2EImporter(TrainingDataImporter):
             ]
 
         additional_e2e_action_names = list(set(additional_e2e_action_names))
-
         return Domain(
             [], [], [], {}, action_names=additional_e2e_action_names, form_names=[]
         )
