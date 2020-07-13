@@ -11,7 +11,10 @@ Stories
 .. contents::
    :local:
 
-Rasa stories are a form of training data used to train the Rasa's dialogue management models.
+Rasa stories are a form of training data used to train Rasa's dialogue management
+models. While :ref:`rules` implement a fixed
+behavior for small conversation parts, stories can be used to train models which are
+able to generalize to unseen conversation paths.
 
 A story is a representation of a conversation between a user and an AI assistant, converted into a specific format where user inputs are expressed as corresponding intents (and entities where necessary) while the responses of an assistant are expressed as corresponding action names.
 
