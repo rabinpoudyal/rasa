@@ -63,7 +63,7 @@ You can read more about forms in `this tutorial <https://blog.rasa.com/building-
        - ( Thanks. Do you know what your credit score is?
 
 
-See :ref:`conditional-logic` for details on how to use forms to implement business logic.
+See :ref:`forms` for details on how to use forms to implement business logic.
 
 Contextual Questions
 --------------------
