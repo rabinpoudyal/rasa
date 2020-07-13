@@ -34,6 +34,302 @@ General
   component in your ``policies`` configuration (``config.yml``) you can replace it
   with ``TEDPolicy``. It accepts the same configuration parameters.
 
+RulePolicy
+~~~~~~~~~~
+
+With the introduction of :ref:`rules` the following policies were deprecated:
+
+- :ref:`mapping-policy`
+- :ref:`fallback-policy`
+- :ref:`two-stage-fallback-policy`
+- :ref:`form-policy`
+
+.. _migrate-mapping-policy-to-rule-policy:
+
+Migrating from the Mapping Policy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you previously used the :ref:`mapping-policy`, you can follow the documentation on
+:ref:`rules-faqs` to convert your mapped intents to rules. Suppose you previously
+mapped an intent ``ask_is_bot`` as follows:
+
+.. code-block:: yaml
+
+    intents:
+     - ask_is_bot:
+         triggers: action_is_bot
+
+This would become the following rule:
+
+.. code-block:: yaml
+
+    rules:
+        rule: Rule to map `ask_is_bot` intent
+        steps:
+        - ...
+        - intent: ask_is_bot
+        - action: action_is_bot
+
+.. _migrate-fallback-policy-to-rule-policy:
+
+Migrating from the Fallback Policy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you previously used the :ref:`fallback-policy`, then the following model
+configuration would translate as follows given a previous configuration like this:
+
+.. code-block:: yaml
+
+    policies:
+      - name: "FallbackPolicy"
+        nlu_threshold: 0.4
+        core_threshold: 0.3
+        fallback_action_name: "action_default_fallback"
+        ambiguity_threshold: 0.1
+
+The new configuration would then look like:
+
+.. code-block:: yaml
+
+    policies:
+    # Other policies
+    - name: RulePolicy
+      core_fallback_threshold: 0.3
+      fallback_action_name: "action_default_fallback"
+
+    pipeline:
+      # Other components
+      - name: FallbackClassifier
+        threshold: 0.4
+        ambiguity_threshold: 0.1
+
+In addition you need to add a :ref:`rule<rules>` to specify which action to run in case
+of low NLU confidence:
+
+.. code-block:: yaml
+
+    rules:
+
+    - rule: Ask the user to rephrase whenever they send a message with low NLU confidence
+      steps:
+      - ...
+      - intent: nlu_fallback
+      - action: utter_please_rephrase
+
+Please see the :ref:`fallback-actions` documentation for more information.
+
+.. _migrate-two-stage-fallback-policy-to-rule-policy:
+
+Migrating from the Two-Stage-Fallback Policy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you previously used the :ref:`two-stage-fallback-policy`, then the following model
+configuration would translate as follows given a previous configuration like this:
+
+    .. code-block:: yaml
+
+        policies:
+          - name: TwoStageFallbackPolicy
+            nlu_threshold: 0.4
+            ambiguity_threshold: 0.1
+            core_threshold: 0.3
+            fallback_core_action_name: "action_default_fallback"
+            fallback_nlu_action_name: "action_default_fallback"
+            deny_suggestion_intent_name: "out_of_scope"
+
+The new configuration would then look like:
+
+.. code-block:: yaml
+
+    policies:
+    # Other policies
+    - name: RulePolicy
+      core_fallback_threshold: 0.3
+      fallback_action_name: "action_default_fallback"
+
+    pipeline:
+      # Other components
+      - name: FallbackClassifier
+        threshold: 0.4
+        ambiguity_threshold: 0.1
+
+In addition you need to add a :ref:`rule<rules>` to activate the Two-Stage Fallback for
+messages with low NLU confidence.
+
+.. code-block:: yaml
+
+    - rule: Implementation of the TwoStageFallbackPolicy
+      steps:
+      - ...
+      # This intent is automatically triggered by the `FallbackClassifier` in the NLU
+      # pipeline in case the intent confidence was below the specified threshold.
+      - intent: nlu_fallback
+      # The Fallback is now implemented as a form.
+      - action: two_stage_fallback
+      - form: two_stage_fallback
+
+Note that the previous parameters ``fallback_nlu_action_name`` and
+``deny_suggestion_intent_name`` are no longer configurable and have the fixed values
+``action_default_fallback`` and ``out_of_scope``.
+
+Please see the :ref:`fallback-actions` documentation for more information.
+
+FormPolicy
+~~~~~~~~~~
+
+As of Rasa Open Source 2.0 the logic for :ref:`forms` was moved from the Rasa SDK
+to Rasa Open Source to ease implementations of custom action libraries. This mean that
+you no longer need to use the ``FormAction`` when implementing custom actions with the
+Python SDK. Instead you can use a regular ``Action`` to validate and request slots.
+
+It is now recommended to move the slot mappings from your custom action to the
+:ref:`domain<domains>` of your bot. Consider a custom form action like this:
+
+.. code-block:: python
+
+    class RestaurantForm(FormAction):
+        def name(self) -> Text:
+            return "restaurant_form"
+
+        @staticmethod
+        def required_slots(tracker: Tracker) -> List[Text]:
+            return ["cuisine"]
+
+        def slot_mappings(self) -> Dict[Text, Union[Dict, List[Dict]]]:
+            return {
+                "cuisine": self.from_entity(entity="cuisine", not_intent="chitchat"),
+            }
+
+        @staticmethod
+        def cuisine_db() -> List[Text]:
+            """Database of supported cuisines"""
+
+            return ["caribbean", "chinese", "french"]
+
+        def validate_cuisine(
+            self,
+            value: Text,
+            dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any],
+        ) -> Dict[Text, Any]:
+            """Validate cuisine value."""
+
+            if value.lower() in self.cuisine_db():
+                # validation succeeded, set the value of the "cuisine" slot to value
+                return {"cuisine": value}
+            else:
+                dispatcher.utter_message(template="utter_wrong_cuisine")
+                # validation failed, set this slot to None, meaning the
+                # user will be asked for the slot again
+                return {"cuisine": None}
+
+        def submit(
+            self,
+            dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any],
+        ) -> List[Dict]:
+            """Define what the form has to do
+                after all required slots are filled"""
+
+            # utter submit template
+            dispatcher.utter_message(template="utter_submit")
+            return []
+
+Start the migration by adding the :ref:`rule-policy` to your model configuration:
+
+.. code-block:: yaml
+
+    policies:
+    # Other policies
+    # ...
+    - name: RulePolicy
+
+Then you need to define the form and the required slots in the domain as described in
+:ref:`forms-domain`:
+
+.. code-block:: yaml
+
+  forms:
+    restaurant_form:
+      cuisine:
+      - type: cuisine
+        entity: cuisine
+        not_intent: chitchat
+
+You don't have to add a rule for activating the form as this is already covered by your
+existing stories. However, you have to add a story for handle the submission of the
+form.
+
+.. code-block:: yaml
+
+    - rule: Submit form
+      steps:
+      # Condition that form is active.
+      - form: restaurant_form
+      - ...
+      - action: restaurant_form
+      - form: null
+      - slot: requested_slot
+        value: null
+      # The action we want to run when the form is submitted.
+      - action: utter_submit
+
+The last step is to implement a custom action to validate the form slots. Start by
+adding the custom action to your domain:
+
+.. code-block:: yaml
+
+    actions:
+    # Other actions
+    # ...
+    - validate_restaurant_form
+
+Then add a custom action which validates the ``cuisine`` slot:
+
+.. code-block:: python
+
+    class RestaurantFormValidator(Action):
+        def name(self) -> Text:
+            return "validate_restaurant_form"
+
+        def run(
+            self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
+        ) -> List[EventType]:
+            extracted_slots: Dict[Text, Any] = tracker.get_extracted_slots()
+
+            cuisine_slot_value = extracted_slots.get("cuisine")
+            validated_slot_event = self.validate_cuisine(
+                cuisine_slot_value, dispatcher, tracker, domain
+            )
+            return [validated_slot_event]
+
+        @staticmethod
+        def cuisine_db() -> List[Text]:
+            """Database of supported cuisines"""
+
+            return ["caribbean", "chinese", "french"]
+
+        def validate_cuisine(
+            self,
+            value: Text,
+            dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any],
+        ) -> EventType:
+            """Validate cuisine value."""
+
+            if value.lower() in self.cuisine_db():
+                # validation succeeded, set the value of the "cuisine" slot to value
+                return SlotSet("cuisine", value)
+            else:
+                dispatcher.utter_message(template="utter_wrong_cuisine")
+                # validation failed, set this slot to None, meaning the
+                # user will be asked for the slot again
+                return SlotSet("cuisine", None)
+
+Please see :ref:`forms` if you have further customizations in your ``FormAction``.
 
 .. _migration-to-rasa-1.8:
 

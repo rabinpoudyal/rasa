@@ -534,6 +534,8 @@ occurs:
        You can include either the ``FallbackPolicy`` or the
        ``TwoStageFallbackPolicy`` in your configuration, but not both.
 
+.. _two-stage-fallback-policy:
+
 Two-Stage Fallback Policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
