@@ -340,6 +340,7 @@ class E2EImporter(TrainingDataImporter):
             self._additional_training_data_from_stories(),
         )
 
+
         return reduce(
             lambda merged, other: merged.merge(other), training_datasets, TrainingData()
         )
