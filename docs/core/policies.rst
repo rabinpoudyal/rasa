@@ -46,12 +46,7 @@ policy class and pass arguments to it.
         max_history: 5
         state_featurizer:
           - name: BinarySingleStateFeaturizer
-    - name: "MemoizationPolicy"
-      max_history: 5
-    - name: "FallbackPolicy"
-      nlu_threshold: 0.4
-      core_threshold: 0.3
-      fallback_action_name: "my_fallback_action"
+    - name: "RulePolicy"
     - name: "path.to.your.policy.class"
       arg1: "..."
 
@@ -139,10 +134,11 @@ predict a next action with a certain confidence level. For more information
 about how each policy makes its decision, read into the policy's description below.
 The bot's next action is then decided by the policy that predicts with the highest confidence.
 
-In the case that two policies predict with equal confidence (for example, the Memoization
-and Mapping Policies always predict with confidence of either 0 or 1), the priority of the
-policies is considered. Rasa policies have default priorities that are set to ensure the
-expected outcome in the case of a tie. They look like this, where higher numbers have higher priority:
+In the case that two policies predict with equal confidence (for example, the the
+Memoization policies always predict with confidence of either 0 or 1), the priority of
+the policies is considered. Rasa policies have default priorities that are set to ensure the
+expected outcome in the case of a tie. They look like this, where higher numbers have
+higher priority:
 
     | 5. ``RulePolicy`` and ``FormPolicy``
     | 4. ``FallbackPolicy`` and ``TwoStageFallbackPolicy``
@@ -150,8 +146,7 @@ expected outcome in the case of a tie. They look like this, where higher numbers
     | 2. ``MappingPolicy``
     | 1. ``TEDPolicy`` and ``SklearnPolicy``
 
-This priority hierarchy ensures that, for example, if there is an intent with a mapped action, but the NLU confidence is not
-above the ``nlu_threshold``, the bot will still fall back. In general, it is not recommended to have more
+In general, it is not recommended to have more
 than one policy per priority level, and some policies on the same priority level, such as the two
 fallback policies, strictly cannot be used in tandem.
 
@@ -372,21 +367,52 @@ It is recommended to use ``state_featurizer=LabelTokenizerSingleStateFeaturizer(
             ``use_maximum_negative_similarity = False``. See `starspace paper <https://arxiv.org/abs/1709.03856>`_
             for details.
 
-
-TODO: Deprecate MappingPolicy, FallbackPolicy, TwoStageFallbackPolicy
-
-
 .. _rule-policy:
 
 Rule Policy
 ^^^^^^^^^^^
 
-TODO: add rulepolicy here
+The ``RulePolicy`` is a policy which handles conversation parts which should follow
+a fixed behavior. Please see :ref:`rules` for further information.
+
+Memoization Policy
+^^^^^^^^^^^^^^^^^^
+
+The ``MemoizationPolicy`` just memorizes the conversations in your
+training data. It predicts the next action with confidence ``1.0``
+if this exact conversation exists in the training data, otherwise it
+predicts ``None`` with confidence ``0.0``.
+
+Augmented Memoization Policy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``AugmentedMemoizationPolicy`` remembers examples from training
+stories for up to ``max_history`` turns, just like the ``MemoizationPolicy``.
+Additionally, it has a forgetting mechanism that will forget a certain amount
+of steps in the conversation history and try to find a match in your stories
+with the reduced history. It predicts the next action with confidence ``1.0``
+if a match is found, otherwise it predicts ``None`` with confidence ``0.0``.
+
+.. note::
+
+  If you have dialogues where some slots that are set during
+  prediction time might not be set in training stories (e.g. in training
+  stories starting with a reminder not all previous slots are set),
+  make sure to add the relevant stories without slots to your training
+  data as well.
 
 .. _mapping-policy:
 
 Mapping Policy
 ^^^^^^^^^^^^^^
+
+.. note::
+
+    The ``MappingPolicy`` is deprecated. Please see :ref:`rules` how to implement
+    its behavior using the :ref:`rule-policy`. If you previously used the
+    ``MappingPolicy``, see the migration guide for
+    :ref:`migrate-mapping-policy-to-rule-policy`.
+
 
 The ``MappingPolicy`` can be used to directly map intents to actions. The
 mappings are assigned by giving an intent the property ``triggers``, e.g.:
@@ -438,42 +464,23 @@ simple example that dispatches a bot utterance and then reverts the interaction:
   and ``action_restart`` in response to ``/back`` and ``/restart``. If it is not included
   in your policy example these intents will not work.
 
-Memoization Policy
-^^^^^^^^^^^^^^^^^^
-
-The ``MemoizationPolicy`` just memorizes the conversations in your
-training data. It predicts the next action with confidence ``1.0``
-if this exact conversation exists in the training data, otherwise it
-predicts ``None`` with confidence ``0.0``.
-
-Augmented Memoization Policy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The ``AugmentedMemoizationPolicy`` remembers examples from training
-stories for up to ``max_history`` turns, just like the ``MemoizationPolicy``.
-Additionally, it has a forgetting mechanism that will forget a certain amount
-of steps in the conversation history and try to find a match in your stories
-with the reduced history. It predicts the next action with confidence ``1.0``
-if a match is found, otherwise it predicts ``None`` with confidence ``0.0``.
-
-.. note::
-
-  If you have dialogues where some slots that are set during
-  prediction time might not be set in training stories (e.g. in training
-  stories starting with a reminder not all previous slots are set),
-  make sure to add the relevant stories without slots to your training
-  data as well.
-
 .. _fallback-policy:
 
 Fallback Policy
 ^^^^^^^^^^^^^^^
 
-The ``FallbackPolicy`` invokes a :ref:`fallback action
-<fallback-actions>` if at least one of the following occurs:
+.. note::
+
+    This ``FallbackPolicy``` is deprecated. Please see :ref:`fallback-actions` how to
+    implement its behavior using the :ref:`rule-policy`. If you previously used the
+    ``FallbackPolicy``, see the migration guide for
+    :ref:`migrate-fallback-policy-to-rule-policy`.
+
+The ``FallbackPolicy`` invokes a predefined action if at least one of the following
+occurs:
 
 1. The intent recognition has a confidence below ``nlu_threshold``.
-2. The highest ranked intent differs in confidence with the second highest 
+2. The highest ranked intent differs in confidence with the second highest
    ranked intent by less than ``ambiguity_threshold``.
 3. None of the dialogue policies predict an action with confidence higher than ``core_threshold``.
 
@@ -502,8 +509,7 @@ The ``FallbackPolicy`` invokes a :ref:`fallback action
     | ``core_threshold``         | Min confidence needed to accept an action   |
     |                            | prediction from Rasa Core                   |
     +----------------------------+---------------------------------------------+
-    | ``fallback_action_name``   | Name of the :ref:`fallback action           |
-    |                            | <fallback-actions>`                         |
+    | ``fallback_action_name``   | Name of the fallback action                 |
     |                            | to be called if the confidence of intent    |
     |                            | or action is below the respective threshold |
     +----------------------------+---------------------------------------------+
@@ -528,10 +534,16 @@ The ``FallbackPolicy`` invokes a :ref:`fallback action
        You can include either the ``FallbackPolicy`` or the
        ``TwoStageFallbackPolicy`` in your configuration, but not both.
 
-.. _two-stage-fallback-policy:
-
 Two-Stage Fallback Policy
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+    This ``Two-Stage Fallback Policy`` is deprecated. Please see :ref:`fallback-actions`
+    how to implement its behavior using the :ref:`rule-policy`. If you previously used
+    the
+    ``Two-Stage Fallback Policy``, see the migration guide for
+    :ref:`migrate-two-stage-fallback-policy-to-rule-policy`.
 
 The ``TwoStageFallbackPolicy`` handles low NLU confidence in multiple stages
 by trying to disambiguate the user input.
@@ -590,7 +602,7 @@ by trying to disambiguate the user input.
     |                               | <fallback-actions>`                      |
     |                               | to be called if the confidence of Rasa   |
     |                               | Core action prediction is below the      |
-    |                               | ``core_threshold``. This action is       |  
+    |                               | ``core_threshold``. This action is       |
     |                               | to propose the recognized intents        |
     +-------------------------------+------------------------------------------+
     | ``fallback_nlu_action_name``  | Name of the :ref:`fallback action        |
@@ -610,13 +622,17 @@ by trying to disambiguate the user input.
       You can include either the ``FallbackPolicy`` or the
       ``TwoStageFallbackPolicy`` in your configuration, but not both.
 
-
 .. _form-policy:
 
 Form Policy
 ^^^^^^^^^^^
 
+.. note::
+
+    This policy is deprecated. Please see :ref:`forms` how to implement
+    its behavior using the :ref:`rule-policy`.
+
 The ``FormPolicy`` is an extension of the ``MemoizationPolicy`` which
 handles the filling of forms. Once a ``FormAction`` is called, the
 ``FormPolicy`` will continually predict the ``FormAction`` until all required
-slots in the form are filled. For more information, see :ref:`forms`.
+slots in the form are filled.
