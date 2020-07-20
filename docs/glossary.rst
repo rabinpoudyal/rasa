@@ -78,6 +78,11 @@ Glossary
 
         Incoming messages are processed by a sequence of components called a pipeline. A component can perform tasks ranging from entity extraction to intent classification to pre-processing.
 
+    :ref:`rules`
+        Special training data to specify rule-like behavior of the assistant, such as
+        answering to FAQs, filling :ref:`forms`, or handling
+        :ref:`fallbacks<fallback-actions>`.
+
     :ref:`Slot <slots>`
         A key-value store that Rasa uses to track information over the course of a conversation.
 
@@ -94,6 +99,3 @@ Glossary
 
     Word embedding / Word vector
         A vector of floating point numbers which represent the meaning of a word. Words which have similar meanings should have vectors which point in almost the same direction.  Word embeddings are often used as an input to machine learning algorithms.
-
-
-TODO: rules
