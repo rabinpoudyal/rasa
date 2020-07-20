@@ -36,7 +36,7 @@ class SlackBot(OutputChannel):
         recipient = self.slack_channel or recipient_id
         for message_part in text.strip().split("\n\n"):
             await self.client.chat_postMessage(
-                channel=recipient, as_user=True, text=message_part, type="mrkdwn",
+                channel=recipient, as_user=True, text=message_part, type="mrkdwn"
             )
 
     async def send_image_url(
@@ -45,7 +45,7 @@ class SlackBot(OutputChannel):
         recipient = self.slack_channel or recipient_id
         image_block = {"type": "image", "image_url": image, "alt_text": image}
         await self.client.chat_postMessage(
-            channel=recipient, as_user=True, text=image, blocks=[image_block],
+            channel=recipient, as_user=True, text=image, blocks=[image_block]
         )
 
     async def send_attachment(
@@ -53,7 +53,7 @@ class SlackBot(OutputChannel):
     ) -> None:
         recipient = self.slack_channel or recipient_id
         await self.client.chat_postMessage(
-            channel=recipient, as_user=True, attachments=[attachment], **kwargs,
+            channel=recipient, as_user=True, attachments=[attachment], **kwargs
         )
 
     async def send_text_with_buttons(
