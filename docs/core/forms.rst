@@ -8,11 +8,6 @@ Forms
 
 .. edit-link::
 
-.. note::
-   There is an in-depth tutorial
-   `here <https://blog.rasa.com/building-contextual-assistants-with-rasa-formaction/>`_
-   about how to use Rasa Forms for slot filling.
-
 .. contents::
    :local:
 
