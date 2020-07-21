@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 from typing import Text, Any, List, Dict, Tuple, TYPE_CHECKING, Union, Iterator
 
+from rasa.utils.validation import validate_yaml_schema, InvalidYamlFileError
 from ruamel.yaml import YAMLError
 
 import rasa.utils.io as io_utils
@@ -29,6 +30,8 @@ KEY_METADATA = "metadata"
 
 MULTILINE_TRAINING_EXAMPLE_LEADING_SYMBOL = "-"
 
+NLU_SCHEMA_FILE = "nlu/schemas/nlu.yml"
+
 
 class RasaYAMLReader(TrainingDataReader):
     """Reads YAML training data and creates a TrainingData object."""
@@ -51,6 +54,11 @@ class RasaYAMLReader(TrainingDataReader):
             New `TrainingData` object with parsed training data.
         """
         from rasa.nlu.training_data import TrainingData
+
+        try:
+            validate_yaml_schema(string, NLU_SCHEMA_FILE)
+        except InvalidYamlFileError as e:
+            raise ValueError(str(e))
 
         yaml_content = io_utils.read_yaml(string)
 

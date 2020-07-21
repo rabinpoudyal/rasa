@@ -44,7 +44,7 @@ def test_wrong_format_raises():
 
     parser = RasaYAMLReader()
 
-    with pytest.raises(YAMLError):
+    with pytest.raises(ValueError):
         parser.reads(wrong_yaml_nlu_content)
 
 
