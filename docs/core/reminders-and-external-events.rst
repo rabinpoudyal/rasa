@@ -52,12 +52,18 @@ The custom action ``action_set_reminder`` should schedule a reminder that, 5 sec
 
 Note that this requires the ``datetime`` and ``rasa_sdk.events`` packages.
 
-Finally, we define another custom action ``action_react_to_reminder`` and link it to the ``EXTERNAL_reminder`` intent:
+Finally, we define another custom action ``action_react_to_reminder`` and link it to the ``EXTERNAL_reminder`` intent
+by writing a :ref:`rule<rules>` for it:
 
-.. code-block:: md
+.. code-block:: yaml
 
-  - EXTERNAL_reminder:
-    triggers: action_react_to_reminder
+    rules:
+
+    - rule: Trigger `action_react_to_reminder` for `EXTERNAL_reminder`
+      steps:
+      - ...
+      - intent: EXTERNAL_reminder
+      - action: action_react_to_reminder
 
 where the ``action_react_to_reminder`` is
 
@@ -132,13 +138,18 @@ For example:
    :pyobject: ActionTellID
 
 In addition, we also declare an intent ``ask_id``, define some NLU data for it, and add both ``action_tell_id`` and
-``ask_id`` to the domain file, where we specify that one should trigger the other:
+``ask_id`` to the domain file. Then we specify a :ref:`rule<rules>` which triggers
+``action_tell_id`` whenever we have the intent ``ask_id``
 
-.. code-block:: md
+.. code-block:: yaml
 
-  intents:
-    - ask_id:
-      triggers: action_tell_id
+    rules:
+
+    - rule: Trigger `action_tell_id` whenever there is the intent `ask_id`
+      steps:
+      - ...
+      - intent: ask_id
+      - action: action_tell_id
 
 Now, when you ask "What is the ID of this conversation?", the assistant replies with something like "The ID of this
 conversation is: 38cc25d7e23e4dde800353751b7c2d3e".
